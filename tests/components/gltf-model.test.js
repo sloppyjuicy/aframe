@@ -1,6 +1,6 @@
-/* global assert, process, setup, suite, test */
-var entityFactory = require('../helpers').entityFactory;
-var THREE = require('index').THREE;
+/* global assert, setup, suite, test */
+import { entityFactory } from '../helpers.js';
+import THREE from 'lib/three.js';
 
 var SRC = '/base/tests/assets/box/Box.gltf';
 var SRC_NO_DEFAULT_SCENE = '/base/tests/assets/box/Box_no_default_scene.gltf';
@@ -13,7 +13,9 @@ suite('gltf-model', function () {
     asset.setAttribute('src', SRC);
     el = this.el = entityFactory({assets: [asset]});
     if (el.hasLoaded) { done(); }
-    el.addEventListener('loaded', function () { done(); });
+    el.addEventListener('loaded', function () {
+      done();
+    });
   });
 
   test('can load', function (done) {
@@ -71,11 +73,19 @@ suite('gltf-model', function () {
       animations: animations
     };
 
-    this.sinon.replace(THREE, 'GLTFLoader', function MockGLTFLoader () {
-      this.load = function (url, onLoad) {
-        process.nextTick(onLoad.bind(null, gltfMock));
+    el.addEventListener('componentinitialized', function (event) {
+      if (event.detail.name !== 'gltf-model') {
+        return;
+      }
+
+      var loader = el.components['gltf-model'].loader;
+      loader.load = function (url, onLoad) {
+        setTimeout(onLoad.bind(null, gltfMock));
       };
-      this.setDRACOLoader = function () {};
+      loader.setDRACOLoader = function () {};
+
+      // Start loading model
+      el.setAttribute('gltf-model', '#gltf');
     });
 
     el.addEventListener('model-loaded', function () {
@@ -85,7 +95,7 @@ suite('gltf-model', function () {
       done();
     });
 
-    el.setAttribute('gltf-model', '#gltf');
+    el.setAttribute('gltf-model', '');
   });
 
   test('can load data not including default scene', function (done) {

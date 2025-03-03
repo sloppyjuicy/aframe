@@ -1,10 +1,10 @@
-var registerShader = require('../core/shader').registerShader;
-var THREE = require('../lib/three');
+import * as THREE from 'three';
+import { registerShader } from '../core/shader.js';
 
 /**
  * Flat shader using THREE.ShadowMaterial.
  */
-module.exports.Shader = registerShader('shadow', {
+export var Shader = registerShader('shadow', {
   schema: {
     opacity: {default: 0.5},
     transparent: {default: true},
@@ -16,7 +16,6 @@ module.exports.Shader = registerShader('shadow', {
    * Adds a reference from the scene to this entity as the camera.
    */
   init: function (data) {
-    this.rendererSystem = this.el.sceneEl.systems.renderer;
     this.material = new THREE.ShadowMaterial();
   },
 
@@ -26,4 +25,3 @@ module.exports.Shader = registerShader('shadow', {
     this.material.transparent = data.transparent;
   }
 });
-

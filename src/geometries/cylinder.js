@@ -1,5 +1,5 @@
-var registerGeometry = require('../core/geometry').registerGeometry;
-var THREE = require('../lib/three');
+import * as THREE from 'three';
+import { registerGeometry } from '../core/geometry.js';
 
 var degToRad = THREE.MathUtils.degToRad;
 
@@ -16,7 +16,7 @@ registerGeometry('cylinder', {
 
   init: function (data) {
     this.geometry = new THREE.CylinderGeometry(
-        data.radius, data.radius, data.height, data.segmentsRadial, data.segmentsHeight,
-        data.openEnded, degToRad(data.thetaStart), degToRad(data.thetaLength));
+      data.radius, data.radius, data.height, data.segmentsRadial, data.segmentsHeight,
+      data.openEnded, degToRad(data.thetaStart), degToRad(data.thetaLength));
   }
 });

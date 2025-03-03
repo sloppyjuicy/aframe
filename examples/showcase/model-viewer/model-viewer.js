@@ -9,9 +9,9 @@ AFRAME.registerComponent('model-viewer', {
     var el = this.el;
 
     el.setAttribute('renderer', {colorManagement: true});
+    el.setAttribute('raycaster', {objects: '.raycastable'});
     el.setAttribute('cursor', {rayOrigin: 'mouse', fuse: false});
     el.setAttribute('webxr', {optionalFeatures: 'hit-test, local-floor, light-estimation, anchors'});
-    el.setAttribute('raycaster', {objects: '.raycastable'});
     el.setAttribute('background', '');
 
     this.onModelLoaded = this.onModelLoaded.bind(this);
@@ -164,7 +164,7 @@ AFRAME.registerComponent('model-viewer', {
     rightHandEl.setAttribute('line', {color: '#118A7E'});
 
     leftHandEl.setAttribute('rotation', '0 90 0');
-    leftHandEl.setAttribute('laser-controls', {hand: 'right'});
+    leftHandEl.setAttribute('laser-controls', {hand: 'left'});
     leftHandEl.setAttribute('raycaster', {objects: '.raycastable'});
     leftHandEl.setAttribute('line', {color: '#118A7E'});
 
@@ -203,13 +203,13 @@ AFRAME.registerComponent('model-viewer', {
     var arShadowEl = this.arShadowEl = document.createElement('a-entity');
     // The title / legend displayed above the model.
     var titleEl = this.titleEl = document.createElement('a-entity');
-    // Scene ligthing.
+    // Scene lighting.
     var lightEl = this.lightEl = document.createElement('a-entity');
     var sceneLightEl = this.sceneLightEl = document.createElement('a-entity');
 
     sceneLightEl.setAttribute('light', {
       type: 'hemisphere',
-      intensity: 1
+      intensity: 3.14
     });
     sceneLightEl.setAttribute('hide-on-enter-ar', '');
 
@@ -242,7 +242,7 @@ AFRAME.registerComponent('model-viewer', {
 
     arShadowEl.setAttribute('rotation', '-90 0 0');
     arShadowEl.setAttribute('geometry', 'primitive: plane; width: 30.0; height: 30.0');
-    arShadowEl.setAttribute('shadow', 'recieve: true');
+    arShadowEl.setAttribute('shadow', 'receive: true');
     arShadowEl.setAttribute('ar-shadows', 'opacity: 0.2');
     arShadowEl.setAttribute('visible', 'false');
 
@@ -274,7 +274,7 @@ AFRAME.registerComponent('model-viewer', {
       shadowCameraRight: 5,
       shadowCameraBottom: -5,
       shadowCameraTop: 5,
-      intensity: 0.5,
+      intensity: 1.57,
       target: 'modelPivot'
     });
 

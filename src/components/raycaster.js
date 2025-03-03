@@ -1,8 +1,8 @@
 /* global MutationObserver */
 
-var registerComponent = require('../core/component').registerComponent;
-var THREE = require('../lib/three');
-var utils = require('../utils/');
+import * as THREE from 'three';
+import { registerComponent } from '../core/component.js';
+import * as utils from '../utils/index.js';
 
 var warn = utils.debug('components:raycaster:warn');
 
@@ -40,7 +40,7 @@ var EVENTS = {
  * @member {number} prevCheckTime - Previous time intersection was checked. To help interval.
  * @member {object} raycaster - three.js Raycaster.
  */
-module.exports.Component = registerComponent('raycaster', {
+export var Component = registerComponent('raycaster', {
   schema: {
     autoRefresh: {default: true},
     direction: {type: 'vec3', default: {x: 0, y: 0, z: -1}},
@@ -102,9 +102,9 @@ module.exports.Component = registerComponent('raycaster', {
     if (data.showLine &&
         (data.far !== oldData.far || data.origin !== oldData.origin ||
          data.direction !== oldData.direction || !oldData.showLine)) {
-      // Calculate unit vector for line direction. Can be multiplied via scalar to performantly
-      // adjust line length.
-      this.unitLineEndVec3.copy(data.origin).add(data.direction).normalize();
+      // Calculate unit vector for line direction. Can be multiplied via scalar and added
+      // to origin to adjust line length.
+      this.unitLineEndVec3.copy(data.direction).normalize();
       this.drawLine();
     }
 
@@ -131,7 +131,9 @@ module.exports.Component = registerComponent('raycaster', {
 
     if (oldData.enabled && !data.enabled) { this.clearAllIntersections(); }
 
-    this.setDirty();
+    if (data.objects !== oldData.objects) {
+      this.setDirty();
+    }
   },
 
   play: function () {
@@ -309,7 +311,7 @@ module.exports.Component = registerComponent('raycaster', {
   /**
    * Return the most recent intersection details for a given entity, if any.
    * @param {AEntity} el
-   * @return {Object}
+   * @returns {object|null}
    */
   getIntersection: function (el) {
     var i;
@@ -386,9 +388,10 @@ module.exports.Component = registerComponent('raycaster', {
     }
 
     // Update the length of the line if given. `unitLineEndVec3` is the direction
-    // given by data.direction, then we apply a scalar to give it a length.
+    // given by data.direction, then we apply a scalar to give it a length and the
+    // origin point to offset it.
     this.lineData.start = data.origin;
-    this.lineData.end = endVec3.copy(this.unitLineEndVec3).multiplyScalar(length);
+    this.lineData.end = endVec3.copy(this.unitLineEndVec3).multiplyScalar(length).add(data.origin);
     this.lineData.color = data.lineColor;
     this.lineData.opacity = data.lineOpacity;
     el.setAttribute('line', this.lineData);
@@ -399,23 +402,33 @@ module.exports.Component = registerComponent('raycaster', {
    * Children are flattened by one level, removing the THREE.Group wrapper,
    * so that non-recursive raycasting remains useful.
    *
-   * Only push children defined as component attachements (e.g., setObject3D),
+   * Only push children defined as component attachments (e.g., setObject3D),
    * NOT actual children in the scene graph hierarchy.
    *
-   * @param  {Array<Element>} els
-   * @return {Array<THREE.Object3D>}
+   * @param {Array<Element>} els
+   * @returns {Array<THREE.Object3D>}
    */
   flattenObject3DMaps: function (els) {
     var key;
     var i;
     var objects = this.objects;
+    var scene = this.el.sceneEl.object3D;
+
+    function isAttachedToScene (object) {
+      if (object.parent) {
+        return isAttachedToScene(object.parent);
+      } else {
+        return (object === scene);
+      }
+    }
 
     // Push meshes and other attachments onto list of objects to intersect.
     objects.length = 0;
     for (i = 0; i < els.length; i++) {
-      if (els[i].isEntity && els[i].object3D) {
-        for (key in els[i].object3DMap) {
-          objects.push(els[i].getObject3D(key));
+      var el = els[i];
+      if (el.isEntity && el.object3D && isAttachedToScene(el.object3D)) {
+        for (key in el.object3DMap) {
+          objects.push(el.getObject3D(key));
         }
       }
     }

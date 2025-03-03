@@ -1,5 +1,5 @@
 /* global Image, XMLHttpRequest */
-var debug = require('./debug');
+import debug from './debug.js';
 
 var warn = debug('utils:src-loader:warn');
 
@@ -10,11 +10,11 @@ var warn = debug('utils:src-loader:warn');
  *
  * `src` will be passed into the callback
  *
- * @params {string|Element} src - URL or media element.
- * @params {function} isImageCb - callback if texture is an image.
- * @params {function} isVideoCb - callback if texture is a video.
+ * @param {string|Element} src - URL or media element.
+ * @param {function} isImageCb - callback if texture is an image.
+ * @param {function} isVideoCb - callback if texture is a video.
  */
-function validateSrc (src, isImageCb, isVideoCb) {
+export function validateSrc (src, isImageCb, isVideoCb) {
   checkIsImage(src, function isAnImageUrl (isImage) {
     if (isImage) {
       isImageCb(src);
@@ -25,59 +25,93 @@ function validateSrc (src, isImageCb, isVideoCb) {
 }
 
 /**
- * Validates six images as a cubemap, either as selector or comma-separated
- * URLs.
+ * Validates either six images as a cubemap or one image as an Equirectangular image.
  *
- * @param {string} src - A selector or comma-separated image URLs. Image URLs
+ * @param {string} src - A selector, image URL or comma-separated image URLs. Image URLS
           must be wrapped by `url()`.
- * @param {string} src - A selector or comma-separated image URLs. Image URLs
-          must be wrapped by `url()`.
+ * @param {function} isCubemapCb - callback if src is a cubemap.
+ * @param {function} isEquirectCb - callback if src is a singular equirectangular image.
  */
-function validateCubemapSrc (src, cb) {
-  var aCubemap;
+export function validateEnvMapSrc (src, isCubemapCb, isEquirectCb) {
+  var el;
   var cubemapSrcRegex = '';
   var i;
   var urls;
   var validatedUrls = [];
 
-  for (i = 0; i < 5; i++) {
-    cubemapSrcRegex += '(url\\((?:[^\\)]+)\\),\\s*)';
-  }
-  cubemapSrcRegex += '(url\\((?:[^\\)]+)\\)\\s*)';
-  urls = src.match(new RegExp(cubemapSrcRegex));
+  if (typeof src === 'string') {
+    for (i = 0; i < 5; i++) {
+      cubemapSrcRegex += '(url\\((?:[^\\)]+)\\),\\s*)';
+    }
+    cubemapSrcRegex += '(url\\((?:[^\\)]+)\\)\\s*)';
+    urls = src.match(new RegExp(cubemapSrcRegex));
 
-  // `src` is a comma-separated list of URLs.
-  // In this case, re-use validateSrc for each side of the cube.
-  function isImageCb (url) {
-    validatedUrls.push(url);
-    if (validatedUrls.length === 6) {
-      cb(validatedUrls);
+    // `src` is a comma-separated list of URLs.
+    // In this case, re-use validateSrc for each side of the cube.
+    function isImageCb (url) {
+      validatedUrls.push(url);
+      if (validatedUrls.length === 6) {
+        isCubemapCb(validatedUrls);
+      }
+    }
+    if (urls) {
+      for (i = 1; i < 7; i++) {
+        validateSrc(parseUrl(urls[i]), isImageCb);
+      }
+      return;
+    }
+
+    // Single URL src
+    if (!src.startsWith('#')) {
+      var parsedSrc = parseUrl(src);
+      if (parsedSrc) {
+        validateSrc(parsedSrc, isEquirectCb);
+      } else {
+        validateSrc(src, isEquirectCb);
+      }
+      return;
     }
   }
-  if (urls) {
-    for (i = 1; i < 7; i++) {
-      validateSrc(parseUrl(urls[i]), isImageCb);
-    }
-    return;
+
+  // `src` is either an element or a query selector to an element (<a-cubemap> or <img>).
+  if (src.tagName) {
+    el = src;
+  } else {
+    el = validateAndGetQuerySelector(src);
   }
 
-  // `src` is a query selector to <a-cubemap> containing six $([src])s.
-  aCubemap = validateAndGetQuerySelector(src);
-  if (!aCubemap) { return; }
-  if (aCubemap.tagName === 'A-CUBEMAP' && aCubemap.srcs) {
-    return cb(aCubemap.srcs);
+  if (!el) { return; }
+  if (el.tagName === 'A-CUBEMAP' && el.srcs) {
+    return isCubemapCb(el.srcs);
   }
-  // Else if aCubeMap is not a <a-cubemap>.
-  warn('Selector "%s" does not point to <a-cubemap>', src);
+  if (el.tagName === 'IMG') {
+    return isEquirectCb(el);
+  }
+  // Else if el is not a valid element, either <a-cubemap> or <img>.
+  warn('Selector "%s" does not point to <a-cubemap> or <img>', src);
+}
+
+/**
+ * Validates six images as a cubemap, either as selector or comma-separated
+ * URLs.
+ *
+ * @param {string} src - A selector or comma-separated image URLs. Image URLs
+          must be wrapped by `url()`.
+ * @param {function} cb - callback if src is a cubemap.
+ */
+export function validateCubemapSrc (src, cb) {
+  return validateEnvMapSrc(src, cb, function isEquirectCb () {
+    warn('Expected cubemap but got image');
+  });
 }
 
 /**
  * Parses src from `url(src)`.
  * @param  {string} src - String to parse.
- * @return {string} The parsed src, if parseable.
+ * @returns {string} The parsed src, if parseable.
  */
-function parseUrl (src) {
-  var parsedSrc = src.match(/\url\((.+)\)/);
+export function parseUrl (src) {
+  var parsedSrc = src.match(/url\((.+)\)/);
   if (!parsedSrc) { return; }
   return parsedSrc[1];
 }
@@ -132,10 +166,10 @@ function checkIsImageFallback (src, onResult) {
 /**
  * Query and validate a query selector,
  *
- * @param  {string} selector - DOM selector.
- * @return {object|null|undefined} Selected DOM element if exists.
-           null if query yields no results.
-           undefined if `selector` is not a valid selector.
+ * @param {string} selector - DOM selector.
+ * @returns {object|null|undefined} Selected DOM element if exists.
+ *          null if query yields no results.
+ *          undefined if `selector` is not a valid selector.
  */
 function validateAndGetQuerySelector (selector) {
   try {
@@ -149,9 +183,3 @@ function validateAndGetQuerySelector (selector) {
     return undefined;
   }
 }
-
-module.exports = {
-  parseUrl: parseUrl,
-  validateSrc: validateSrc,
-  validateCubemapSrc: validateCubemapSrc
-};

@@ -1,15 +1,16 @@
-/* global THREE, XRWebGLBinding */
-var register = require('../../core/component').registerComponent;
+/* global XRWebGLBinding */
+import * as THREE from 'three';
+import { registerComponent as register } from '../../core/component.js';
 
 // source: view-source:https://storage.googleapis.com/chromium-webxr-test/r886480/proposals/lighting-estimation.html
 function updateLights (estimate, probeLight, directionalLight, directionalLightPosition) {
   var intensityScalar =
     Math.max(estimate.primaryLightIntensity.x,
-      Math.max(estimate.primaryLightIntensity.y,
-        estimate.primaryLightIntensity.z));
+             Math.max(estimate.primaryLightIntensity.y,
+                      estimate.primaryLightIntensity.z));
 
   probeLight.sh.fromArray(estimate.sphericalHarmonicsCoefficients);
-  probeLight.intensity = 1;
+  probeLight.intensity = 3.14;
 
   if (directionalLight) {
     directionalLight.color.setRGB(
@@ -22,10 +23,11 @@ function updateLights (estimate, probeLight, directionalLight, directionalLightP
   }
 }
 
-module.exports.Component = register('reflection', {
+export var Component = register('reflection', {
   schema: {
     directionalLight: { type: 'selector' }
   },
+  sceneOnly: true,
   init: function () {
     var self = this;
     this.cubeRenderTarget = new THREE.WebGLCubeRenderTarget(16);
@@ -42,17 +44,16 @@ module.exports.Component = register('reflection', {
     }
 
     this.el.addEventListener('enter-vr', function () {
+      if (!self.el.is('ar-mode')) { return; }
       var renderer = self.el.renderer;
       var session = renderer.xr.getSession();
-      if (
-        session.requestLightProbe && self.el.is('ar-mode')
-      ) {
+      if (session.requestLightProbe) {
         self.startLightProbe();
       }
     });
 
     this.el.addEventListener('exit-vr', function () {
-      self.stopLightProbe();
+      if (self.xrLightProbe) { self.stopLightProbe(); }
     });
 
     this.el.object3D.environment = this.cubeRenderTarget.texture;
@@ -142,7 +143,7 @@ module.exports.Component = register('reflection', {
       this.needsVREnvironmentUpdate = false;
       this.cubeCamera.position.set(0, 1.6, 0);
       this.cubeCamera.update(renderer, scene);
-      this.el.object3D.environment = this.cubeRenderTarget.texture;
+      scene.environment = this.cubeRenderTarget.texture;
     }
 
     if (this.needsLightProbeUpdate && frame) {
@@ -155,6 +156,8 @@ module.exports.Component = register('reflection', {
 
   remove: function () {
     this.el.object3D.environment = null;
-    this.removeChild(this.probeLight);
+    if (this.probeLight) {
+      this.el.removeChild(this.probeLight);
+    }
   }
 });

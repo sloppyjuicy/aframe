@@ -1,16 +1,16 @@
 /* global DeviceOrientationEvent  */
-var registerComponent = require('../core/component').registerComponent;
-var THREE = require('../lib/three');
-var utils = require('../utils/');
-var bind = utils.bind;
+import * as THREE from 'three';
+import { DeviceOrientationControls } from '../../vendor/DeviceOrientationControls.js';
+import { registerComponent } from '../core/component.js';
+import * as utils from '../utils/index.js';
 
 // To avoid recalculation at every mouse movement tick
 var PI_2 = Math.PI / 2;
 
 /**
- * look-controls. Update entity pose, factoring mouse, touch, and WebVR API data.
+ * look-controls. Update entity pose, factoring mouse, touch.
  */
-module.exports.Component = registerComponent('look-controls', {
+export var Component = registerComponent('look-controls', {
   dependencies: ['position', 'rotation'],
 
   schema: {
@@ -57,7 +57,7 @@ module.exports.Component = registerComponent('look-controls', {
 
     // Only on mobile devices and only enabled if DeviceOrientation permission has been granted.
     if (utils.device.isMobile() || utils.device.isMobileDeviceRequestingDesktopSite()) {
-      magicWindowControls = this.magicWindowControls = new THREE.DeviceOrientationControls(this.magicWindowObject);
+      magicWindowControls = this.magicWindowControls = new DeviceOrientationControls(this.magicWindowObject);
       if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
         magicWindowControls.enabled = false;
         if (this.el.sceneEl.components['device-orientation-permission-ui'].permissionGranted) {
@@ -118,16 +118,16 @@ module.exports.Component = registerComponent('look-controls', {
   },
 
   bindMethods: function () {
-    this.onMouseDown = bind(this.onMouseDown, this);
-    this.onMouseMove = bind(this.onMouseMove, this);
-    this.onMouseUp = bind(this.onMouseUp, this);
-    this.onTouchStart = bind(this.onTouchStart, this);
-    this.onTouchMove = bind(this.onTouchMove, this);
-    this.onTouchEnd = bind(this.onTouchEnd, this);
-    this.onEnterVR = bind(this.onEnterVR, this);
-    this.onExitVR = bind(this.onExitVR, this);
-    this.onPointerLockChange = bind(this.onPointerLockChange, this);
-    this.onPointerLockError = bind(this.onPointerLockError, this);
+    this.onMouseDown = this.onMouseDown.bind(this);
+    this.onMouseMove = this.onMouseMove.bind(this);
+    this.onMouseUp = this.onMouseUp.bind(this);
+    this.onTouchStart = this.onTouchStart.bind(this);
+    this.onTouchMove = this.onTouchMove.bind(this);
+    this.onTouchEnd = this.onTouchEnd.bind(this);
+    this.onEnterVR = this.onEnterVR.bind(this);
+    this.onExitVR = this.onExitVR.bind(this);
+    this.onPointerLockChange = this.onPointerLockChange.bind(this);
+    this.onPointerLockError = this.onPointerLockError.bind(this);
   },
 
  /**
@@ -150,7 +150,7 @@ module.exports.Component = registerComponent('look-controls', {
 
     // Wait for canvas to load.
     if (!canvasEl) {
-      sceneEl.addEventListener('render-target-loaded', bind(this.addEventListeners, this));
+      sceneEl.addEventListener('render-target-loaded', this.addEventListeners.bind(this));
       return;
     }
 
@@ -160,9 +160,9 @@ module.exports.Component = registerComponent('look-controls', {
     window.addEventListener('mouseup', this.onMouseUp, false);
 
     // Touch events.
-    canvasEl.addEventListener('touchstart', this.onTouchStart);
-    window.addEventListener('touchmove', this.onTouchMove);
-    window.addEventListener('touchend', this.onTouchEnd);
+    canvasEl.addEventListener('touchstart', this.onTouchStart, {passive: true});
+    window.addEventListener('touchmove', this.onTouchMove, {passive: true});
+    window.addEventListener('touchend', this.onTouchEnd, {passive: true});
 
     // sceneEl events.
     sceneEl.addEventListener('enter-vr', this.onEnterVR);
@@ -359,7 +359,7 @@ module.exports.Component = registerComponent('look-controls', {
     deltaY = 2 * Math.PI * (evt.touches[0].pageX - this.touchStart.x) / canvas.clientWidth;
 
     direction = this.data.reverseTouchDrag ? 1 : -1;
-    // Limit touch orientaion to to yaw (y axis).
+    // Limit touch orientation to to yaw (y axis).
     yawObject.rotation.y -= deltaY * 0.5 * direction;
     this.touchStart = {
       x: evt.touches[0].pageX,
